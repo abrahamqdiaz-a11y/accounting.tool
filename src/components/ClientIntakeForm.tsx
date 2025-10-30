@@ -23,6 +23,7 @@ export function ClientIntakeForm() {
   const [showReferredBy, setShowReferredBy] = useState(false)
   const [recentClients, setRecentClients] = useState<RecentClient[]>([])
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null)
+  const [showFloatingButton, setShowFloatingButton] = useState(false)
 
   const {
     register,
@@ -166,6 +167,33 @@ export function ClientIntakeForm() {
     if (saved) {
       setRecentClients(JSON.parse(saved))
     }
+  }, [])
+
+  // Keyboard shortcut: Cmd/Ctrl + Enter to submit
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleSubmit(onSubmit)()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleSubmit])
+
+  // Show floating button when scrolling past submit button
+  useEffect(() => {
+    const handleScroll = () => {
+      const submitButton = document.querySelector('[data-submit-button]')
+      if (submitButton) {
+        const rect = submitButton.getBoundingClientRect()
+        setShowFloatingButton(rect.bottom < 0)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
@@ -405,6 +433,7 @@ export function ClientIntakeForm() {
           <button
             type="submit"
             disabled={isSubmitting}
+            data-submit-button
             className={cn(
               'w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium text-white transition-all',
               'bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800',
@@ -431,6 +460,36 @@ export function ClientIntakeForm() {
           )}
         </div>
       </form>
+
+      {/* Floating Submit Button */}
+      {showFloatingButton && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4">
+          <button
+            type="button"
+            onClick={() => handleSubmit(onSubmit)()}
+            disabled={isSubmitting}
+            className={cn(
+              'flex items-center gap-2 px-6 py-3 rounded-full font-medium text-white shadow-lg transition-all',
+              'bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800',
+              'hover:shadow-xl hover:scale-105',
+              'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+              'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+            )}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="hidden sm:inline">Submitting...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-5 w-5" />
+                <span className="hidden sm:inline">Submit Client</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Recent Clients Sidebar */}
       {recentClients.length > 0 && (
